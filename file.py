@@ -2,6 +2,15 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
+def extract_party_name(text):
+  parts = text.split("(")
+  if len(parts) > 1:
+    party_name = parts[1].strip()
+    party_name = party_name.split(")")[0].strip()
+    return party_name
+  else:
+    return None
+
 url = "https://results.eci.gov.in/PcResultGenJune2024/index.htm"
 response = requests.get(url)
 if response.status_code == 200:
@@ -36,9 +45,10 @@ for link in href_links:
     # Check if the request was successful
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, 'html.parser')
+        party = soup.find('div', class_="page-title").find('h2').find('span')
         result_div = soup.find('div', class_="table-responsive")
         if result_div:
-            table = result_div.find('table')
+            table = result_div.find('table')    
             headers = []
             for th in table.find_all('th'):
                 headers.append(th.text.strip())
@@ -48,8 +58,8 @@ for link in href_links:
                 row = [cell.text.strip() for cell in cells]
                 rows.append(row)
             df = pd.DataFrame(rows, columns=headers)
+            df["party"] = extract_party_name(party.text)
             dataframes.append(df)
-
 big_df = pd.concat(dataframes, ignore_index=True)
 
 
